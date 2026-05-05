@@ -1,0 +1,10 @@
+{
+  "id": "abal-lang",
+  "name": "ABAL Language",
+  "version": "1.0.0",
+  "minAppVersion": "1.8.7",
+  "description": "Coloration syntaxique pour le langage ABAL dans les blocs de code.",
+  "author": "Kilian Breton (Etudes Informatiques et Services)",
+  "authorUrl": "https://github.com/Etudes-Informatiques-et-Services35",
+  "isDesktopOnly": false
+}
