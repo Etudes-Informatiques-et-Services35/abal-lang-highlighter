@@ -1,7 +1,7 @@
 {
   "id": "abal-lang",
   "name": "ABAL Language highlighter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.8.7",
   "description": "Highligting syntax for ABAL language in code blocks.",
   "author": "Kilian Breton (Etudes Informatiques et Services)",
