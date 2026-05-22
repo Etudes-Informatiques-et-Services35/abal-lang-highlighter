@@ -23,6 +23,8 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
+var import_state = require("@codemirror/state");
+var import_view = require("@codemirror/view");
 var KEYWORDS = /* @__PURE__ */ new Set([
   "dcl",
   "on",
@@ -170,6 +172,85 @@ var KEYWORDS = /* @__PURE__ */ new Set([
   "cfile",
   "gener"
 ]);
+var DEC = {
+  keyword: import_view.Decoration.mark({ class: "abal-keyword" }),
+  string: import_view.Decoration.mark({ class: "abal-string" }),
+  comment: import_view.Decoration.mark({ class: "abal-comment" }),
+  number: import_view.Decoration.mark({ class: "abal-number" }),
+  operator: import_view.Decoration.mark({ class: "abal-operator" }),
+  punctuation: import_view.Decoration.mark({ class: "abal-punctuation" })
+};
+function addDecorations(source, offset, builder) {
+  let i = 0;
+  const n = source.length;
+  while (i < n) {
+    if (source[i] === ";") {
+      let j = i;
+      while (j < n && source[j] !== "\n") j++;
+      builder.add(offset + i, offset + j, DEC.comment);
+      i = j;
+      continue;
+    }
+    if (source[i] === '"') {
+      let j = i + 1;
+      while (j < n && source[j] !== '"' && source[j] !== "\n") j++;
+      if (j < n && source[j] === '"') j++;
+      builder.add(offset + i, offset + j, DEC.string);
+      i = j;
+      continue;
+    }
+    const hexM = source.slice(i).match(/^0[xX][0-9a-fA-F]+/);
+    if (hexM) {
+      builder.add(offset + i, offset + i + hexM[0].length, DEC.number);
+      i += hexM[0].length;
+      continue;
+    }
+    const decM = source.slice(i).match(/^\d+(?:\.\d+)?/);
+    if (decM && (i === 0 || !/[a-zA-Z_$]/.test(source[i - 1]))) {
+      builder.add(offset + i, offset + i + decM[0].length, DEC.number);
+      i += decM[0].length;
+      continue;
+    }
+    const idM = source.slice(i).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+    if (idM) {
+      if (KEYWORDS.has(idM[0].toLowerCase()))
+        builder.add(offset + i, offset + i + idM[0].length, DEC.keyword);
+      i += idM[0].length;
+      continue;
+    }
+    if (/[+\-\$*\/=<>!&|%]/.test(source[i])) {
+      builder.add(offset + i, offset + i + 1, DEC.operator);
+      i++;
+      continue;
+    }
+    if (/[()[\]{},.:@]/.test(source[i])) {
+      builder.add(offset + i, offset + i + 1, DEC.punctuation);
+      i++;
+      continue;
+    }
+    i++;
+  }
+}
+function buildDecorations(doc) {
+  const builder = new import_state.RangeSetBuilder();
+  const fenceRe = /^```abal[ \t]*\n([\s\S]*?)^```[ \t]*$/gim;
+  let match;
+  while ((match = fenceRe.exec(doc)) !== null) {
+    const contentStart = doc.indexOf("\n", match.index) + 1;
+    addDecorations(match[1], contentStart, builder);
+  }
+  return builder.finish();
+}
+var abalField = import_state.StateField.define({
+  create(state) {
+    return buildDecorations(state.doc.toString());
+  },
+  update(deco, tr) {
+    if (!tr.docChanged) return deco;
+    return buildDecorations(tr.state.doc.toString());
+  },
+  provide: (f) => import_view.EditorView.decorations.from(f)
+});
 function escHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -177,8 +258,7 @@ function span(cls, text) {
   return `<span class="token ${cls}">${escHtml(text)}</span>`;
 }
 function highlight(source) {
-  let out = "";
-  let i = 0;
+  let out = "", i = 0;
   const n = source.length;
   while (i < n) {
     if (source[i] === ";") {
@@ -196,23 +276,22 @@ function highlight(source) {
       i = j;
       continue;
     }
-    const hexMatch = source.slice(i).match(/^0[xX][0-9a-fA-F]+/);
-    if (hexMatch) {
-      out += span("number", hexMatch[0]);
-      i += hexMatch[0].length;
+    const hexM = source.slice(i).match(/^0[xX][0-9a-fA-F]+/);
+    if (hexM) {
+      out += span("number", hexM[0]);
+      i += hexM[0].length;
       continue;
     }
-    const decMatch = source.slice(i).match(/^\d+(?:\.\d+)?/);
-    if (decMatch && (i === 0 || !/[a-zA-Z_$]/.test(source[i - 1]))) {
-      out += span("number", decMatch[0]);
-      i += decMatch[0].length;
+    const decM = source.slice(i).match(/^\d+(?:\.\d+)?/);
+    if (decM && (i === 0 || !/[a-zA-Z_$]/.test(source[i - 1]))) {
+      out += span("number", decM[0]);
+      i += decM[0].length;
       continue;
     }
-    const identMatch = source.slice(i).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
-    if (identMatch) {
-      const word = identMatch[0];
-      out += KEYWORDS.has(word.toLowerCase()) ? span("keyword", word) : escHtml(word);
-      i += word.length;
+    const idM = source.slice(i).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+    if (idM) {
+      out += KEYWORDS.has(idM[0].toLowerCase()) ? span("keyword", idM[0]) : escHtml(idM[0]);
+      i += idM[0].length;
       continue;
     }
     if (/[+\-*\/=<>!&|%]/.test(source[i])) {
@@ -227,32 +306,36 @@ function highlight(source) {
   }
   return out;
 }
+function applyHighlight(block, observers) {
+  block.innerHTML = highlight(block.textContent ?? "");
+  const obs = new MutationObserver(() => {
+    if (!block.querySelector(".token")) {
+      obs.disconnect();
+      block.innerHTML = highlight(block.textContent ?? "");
+      obs.observe(block, { childList: true, subtree: true });
+    }
+  });
+  obs.observe(block, { childList: true, subtree: true });
+  observers.push(obs);
+}
 var AbalLangPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
     this.observers = [];
   }
   async onload() {
-    this.registerMarkdownPostProcessor((element) => {
-      element.querySelectorAll("code[class*='language-abal']").forEach((block) => {
-        this.highlightBlock(block);
+    this.registerEditorExtension(abalField);
+    this.registerMarkdownPostProcessor((el) => {
+      el.querySelectorAll("code[class*='language-abal']").forEach((b) => {
+        if (!b.dataset.abal) {
+          b.dataset.abal = "1";
+          applyHighlight(b, this.observers);
+        }
       });
     });
   }
   onunload() {
-    this.observers.forEach((obs) => obs.disconnect());
+    this.observers.forEach((o) => o.disconnect());
     this.observers = [];
-  }
-  highlightBlock(block) {
-    const obs = new MutationObserver(() => {
-      if (!block.querySelector(".token")) {
-        obs.disconnect();
-        block.innerHTML = highlight(block.textContent ?? "");
-        obs.observe(block, { childList: true, subtree: true });
-      }
-    });
-    block.innerHTML = highlight(block.textContent ?? "");
-    obs.observe(block, { childList: true, subtree: true });
-    this.observers.push(obs);
   }
 };

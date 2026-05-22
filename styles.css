@@ -1,7 +1,26 @@
-/* Coloration syntaxique ABAL — tokens Prism */
-.language-abal .token.keyword   { color: var(--code-keyword,   #c792ea); font-weight: bold; }
-.language-abal .token.string    { color: var(--code-string,    #c3e88d); }
-.language-abal .token.comment   { color: var(--code-comment,   #697098); font-style: italic; }
-.language-abal .token.number    { color: var(--code-value,     #f78c6c); }
-.language-abal .token.operator  { color: var(--code-operator,  #89ddff); }
+/* Mode lecture : tokens Prism (HTML) */
+/*
+.language-abal .token.keyword     { color: var(--code-keyword,     #fa1111); font-weight: bold; }
+.language-abal .token.keyword     { color: var(--code-keyword,     #fa1111); font-weight: bold; }
+.language-abal .token.string      { color: var(--code-string,      #dd8de8); }
+.language-abal .token.comment     { color: var(--code-comment,     #697098); font-style: italic; }
+.language-abal .token.number      { color: var(--code-value,       #f78c6c); }
+.language-abal .token.operator    { color: var(--code-operator,    #89ddff); }
 .language-abal .token.punctuation { color: var(--code-punctuation, #89ddff); }
+*/
+
+
+.language-abal .token.keyword     { color: #fa1111; font-weight: bold; }
+.language-abal .token.string      { color: #dd8de8; }
+.language-abal .token.comment     { color: #23851a; }
+.language-abal .token.number      { color: #a3a369; }
+.language-abal .token.operator    { color: #10262f; }
+.language-abal .token.punctuation { color: #1f3a45; }
+
+/* Mode édition : décorations CM6 */
+.abal-keyword     { color: #fa1111; font-weight: bold; }
+.abal-string      { color: #dd8de8; }
+.abal-comment     { color: #23851a; }
+.abal-number      { color: #a3a369; }
+.abal-operator    { color: #10262f; }
+.abal-punctuation { color: #1f3a45; }
